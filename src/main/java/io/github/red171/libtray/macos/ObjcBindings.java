@@ -76,6 +76,10 @@ final class ObjcBindings extends NativeLibrary {
                     FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             bind(handles, lookups, "objc_msgSend_bool", "objc_msgSend",
                     FunctionDescriptor.of(ValueLayout.JAVA_BYTE, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+            bind(handles, lookups, "objc_msgSend_bool_long", "objc_msgSend",
+                    FunctionDescriptor.of(ValueLayout.JAVA_BYTE, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+            bind(handles, lookups, "objc_msgSend_id_long", "objc_msgSend",
+                    FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
             bind(handles, lookups, "objc_msgSend_void_bool", "objc_msgSend",
                     FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BYTE));
             bind(handles, lookups, "objc_msgSend_long_long", "objc_msgSend",

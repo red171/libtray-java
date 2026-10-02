@@ -87,7 +87,11 @@ public final class AppKitTray extends AbstractTray {
         ObjcBindings bindings = RuntimeState.BINDINGS;
         var result = new AppKitTray[1];
         bindings.pool(() -> {
-            bindings.object(bindings.cls("NSApplication"), "sharedApplication");
+            MemorySegment application = bindings.object(bindings.cls("NSApplication"), "sharedApplication");
+            if (bindings.number("objc_msgSend_bool", application, bindings.sel("isRunning")) == 0) {
+                bindings.number("objc_msgSend_bool_long", application, bindings.sel("setActivationPolicy:"), 1L);
+                bindings.call("objc_msgSend_void", application, bindings.sel("finishLaunching"));
+            }
             MemorySegment statusBar = bindings.object(bindings.cls("NSStatusBar"), "systemStatusBar");
             MemorySegment statusItem = bindings.pointer("objc_msgSend_id_double", statusBar,
                     bindings.sel("statusItemWithLength:"), -2.0);
@@ -174,6 +178,14 @@ public final class AppKitTray extends AbstractTray {
             debug(failure);
             return false;
         }
+    }
+
+    MemorySegment buttonHandle() {
+        return button;
+    }
+
+    MemorySegment menuHandle() {
+        return nativeMenu;
     }
 
     private void applyIcon(byte[] bytes) {

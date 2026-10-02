@@ -30,7 +30,7 @@ class Win32TrayTest {
         var bytes = new ByteArrayOutputStream();
         assertTrue(ImageIO.write(new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB), "PNG", bytes));
         for (int attempt = 0; attempt < 2; attempt++) {
-            try (Tray tray = Tray.create(new TrayBuilder("Port test", bytes.toByteArray()));
+            try (Tray tray = Win32Tray.create(new TrayBuilder("Port test", bytes.toByteArray()));
                  Win32Bindings bindings = Win32Bindings.load()) {
                 assertNotNull(tray, "Shell_NotifyIcon must be available");
                 var events = new LinkedBlockingQueue<TrayEvent>();

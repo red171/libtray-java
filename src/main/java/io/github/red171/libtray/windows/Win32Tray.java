@@ -48,6 +48,7 @@ public final class Win32Tray extends AbstractTray {
     private volatile TrayMenu menu;
     private volatile String tooltip;
     private volatile boolean created;
+    private volatile RuntimeException creationFailure;
     private MemorySegment icon = MemorySegment.NULL;
     private boolean version4;
 
@@ -76,6 +77,9 @@ public final class Win32Tray extends AbstractTray {
             Thread.currentThread().interrupt();
         }
         tray.close();
+        if (tray.creationFailure != null) {
+            throw tray.creationFailure;
+        }
         return null;
     }
 
@@ -151,13 +155,13 @@ public final class Win32Tray extends AbstractTray {
             windowClass.set(ValueLayout.ADDRESS, offset(Win32Bindings.WINDOW_CLASS, "hInstance"), instance);
             windowClass.set(ValueLayout.ADDRESS, offset(Win32Bindings.WINDOW_CLASS, "lpszClassName"), className);
             if (bindings.number("RegisterClassExW", windowClass) == 0) {
-                return;
+                throw nativeFailure("RegisterClassExW");
             }
             registered = true;
             window = bindings.pointer("CreateWindowExW", 0, className, NativeLibrary.wideString(arena, title),
                     0, 0, 0, 0, 0, MemorySegment.NULL, MemorySegment.NULL, instance, MemorySegment.NULL);
             if (window.address() == 0) {
-                return;
+                throw nativeFailure("CreateWindowExW");
             }
             WINDOWS.put(window.address(), this);
             icon = createIcon(initialIcon);
@@ -170,7 +174,7 @@ public final class Win32Tray extends AbstractTray {
             writeTip(tooltip);
             created = icon.address() != 0 && notifyIcon(0);
             if (!created) {
-                return;
+                throw nativeFailure(icon.address() == 0 ? "CreateIcon" : "Shell_NotifyIconW NIM_ADD");
             }
             version4 = notifyIcon(4);
             ready.countDown();
@@ -190,6 +194,7 @@ public final class Win32Tray extends AbstractTray {
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } catch (RuntimeException failure) {
+            creationFailure = failure;
             debug(failure);
         } finally {
             open.set(false);
@@ -218,6 +223,10 @@ public final class Win32Tray extends AbstractTray {
     private boolean notifyIcon(int operation) {
         iconData.set(ValueLayout.JAVA_INT, notifyOffset("uFlags"), ICON_FLAGS);
         return bindings.number("Shell_NotifyIconW", operation, iconData) != 0;
+    }
+
+    private IllegalStateException nativeFailure(String operation) {
+        return new IllegalStateException(operation + " failed (GetLastError=" + bindings.number("GetLastError") + ")");
     }
 
     private void writeTip(String text) {
