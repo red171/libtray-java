@@ -1,0 +1,11 @@
+libtray-java
+
+Derived from libtray by Kitty-Hivens:
+https://github.com/Kitty-Hivens/libtray
+
+Based on the red171/libtray Flatpak fork:
+https://github.com/red171/libtray
+fix/flatpak-sni-bus-name at e83aa92ad73e822dbb5e423f92fe4c5503dff927
+
+The Java counterparts in this project are modified/ported sources.
+Kotlin and SLF4J have been removed. Java API and build differ from upstream.

@@ -1,0 +1,105 @@
+name: Build and publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - windows-2025
+          - windows-11-arm
+          - macos-15-intel
+          - macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: '25'
+          cache: maven
+      - name: Install Linux test bus
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dbus libdbus-1-3
+      - name: Start Windows shell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) {
+            Start-Process explorer.exe
+            Start-Sleep -Seconds 3
+          }
+      - name: Linux native tests
+        if: runner.os == 'Linux'
+        run: dbus-run-session -- mvn -B -Pnative-tests verify
+      - name: Windows native tests
+        if: runner.os == 'Windows'
+        run: mvn -B -Pnative-tests verify
+      - name: macOS tests and native smoke
+        if: runner.os == 'macOS'
+        run: |
+          mvn -B verify
+          java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
+            -cp target/classes:target/test-classes io.github.red171.libtray.macos.MacSmoke
+      - name: Test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ matrix.runner }}
+          path: target/surefire-reports
+
+  publish:
+    name: Publish Maven package
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: '25'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+      - name: Publish
+        run: mvn -B -DskipTests deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify published package from an empty Maven cache
+        run: >-
+          mvn -B dependency:get
+          -Dartifact=io.github.red171:libtray-java:0.1.0-SNAPSHOT
+          -Dtransitive=false
+          -DremoteRepositories=github::default::https://maven.pkg.github.com/red171/libtray-java
+          -Dmaven.repo.local="${RUNNER_TEMP}/published-package-check"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: libtray-java
+          path: |
+            target/*.jar
+            pom.xml
