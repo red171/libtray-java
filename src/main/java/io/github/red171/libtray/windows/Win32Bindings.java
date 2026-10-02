@@ -69,6 +69,12 @@ final class Win32Bindings extends NativeLibrary {
                     SymbolLookup.libraryLookup("shell32", arena),
                     SymbolLookup.libraryLookup("gdi32", arena));
             var handles = new HashMap<String, MethodHandle>();
+            bind(handles, lookups, "GetShellWindow", FunctionDescriptor.of(ValueLayout.ADDRESS));
+            bind(handles, lookups, "FindWindowW",
+                    FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+            bind(handles, lookups, "SendMessageW",
+                    FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.JAVA_INT,
+                            ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
             bind(handles, lookups, "RegisterWindowMessageW",
                     FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
             bind(handles, lookups, "GetCursorPos",

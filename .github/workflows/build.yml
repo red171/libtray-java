@@ -46,6 +46,8 @@ jobs:
             Start-Process explorer.exe
             Start-Sleep -Seconds 3
           }
+          Write-Host "UserInteractive=$([Environment]::UserInteractive), SessionId=$((Get-Process -Id $PID).SessionId)"
+          Get-Process explorer -ErrorAction SilentlyContinue | Select-Object Id, SessionId
       - name: Linux native tests
         if: runner.os == 'Linux'
         run: dbus-run-session -- mvn -B -Pnative-tests verify
