@@ -45,6 +45,27 @@ class Win32TrayTest {
                     MemorySegment.NULL).address();
             assumeTrue(shell != 0 && taskbar != 0,
                     "Runner has no interactive shell/taskbar (shell=" + shell + ", taskbar=" + taskbar + ")");
+            MemorySegment window = bindings.pointer("CreateWindowExW", 0,
+                    NativeLibrary.wideString(arena, "STATIC"), NativeLibrary.wideString(arena, "Shell probe"),
+                    0, 0, 0, 0, 0, MemorySegment.NULL, MemorySegment.NULL, MemorySegment.NULL, MemorySegment.NULL);
+            assertNotEquals(0L, window.address());
+            MemorySegment data = arena.allocate(Win32Bindings.NOTIFY_ICON);
+            data.set(ValueLayout.JAVA_INT, notifyOffset("cbSize"), (int) data.byteSize());
+            data.set(ValueLayout.ADDRESS, notifyOffset("hWnd"), window);
+            data.set(ValueLayout.JAVA_INT, notifyOffset("uID"), 177);
+            data.set(ValueLayout.JAVA_INT, notifyOffset("uFlags"), 0x87);
+            data.set(ValueLayout.JAVA_INT, notifyOffset("uCallbackMessage"), 0x0401);
+            MemorySegment stockIcon = bindings.pointer("LoadIconW", MemorySegment.NULL, MemorySegment.ofAddress(32512));
+            assertNotEquals(0L, stockIcon.address());
+            data.set(ValueLayout.ADDRESS, notifyOffset("hIcon"), stockIcon);
+            boolean shellAvailable;
+            try {
+                shellAvailable = bindings.number("Shell_NotifyIconW", 0, data) != 0;
+            } finally {
+                bindings.number("Shell_NotifyIconW", 2, data);
+                bindings.number("DestroyWindow", window);
+            }
+            assumeTrue(shellAvailable, "Runner shell rejects stock Windows notification icon; desktop test unavailable");
         }
         var bytes = new ByteArrayOutputStream();
         assertTrue(ImageIO.write(new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB), "PNG", bytes));
@@ -110,6 +131,10 @@ class Win32TrayTest {
 
     private static long offset(String field) {
         return Win32Bindings.WINDOW_CLASS.byteOffset(MemoryLayout.PathElement.groupElement(field));
+    }
+
+    private static long notifyOffset(String field) {
+        return Win32Bindings.NOTIFY_ICON.byteOffset(MemoryLayout.PathElement.groupElement(field));
     }
 
     private static long windowProc(MemorySegment window, int message, long word, long parameter) {

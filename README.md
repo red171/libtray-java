@@ -117,8 +117,9 @@ finish-args:
 No `--own-name=org.kde.*` permission is needed with the configured bus name.
 Names must be unique for multiple instances/tray icons. Without configuration,
 the original generated `org.kde.StatusNotifierItem-PID-N` naming is preserved.
-The bus-name patch is ported; running inside an actual Flatpak sandbox remains
-a separate integration test.
+The configured bus name, D-Bus title property, Activate callback and clean close
+have also been smoke-tested inside the existing Core Flatpak sandbox, without
+replacing the installed application. Visual panel rendering remains untested.
 
 ## Build and tests
 
@@ -132,8 +133,11 @@ dbus-run-session -- mvn -Pnative-tests verify
 Linux native tests use a real isolated session bus and a test tray watcher.
 They exercise registration/re-registration, properties, icon byte order, menus,
 callbacks, malformed requests and cleanup. They do not inspect a real desktop
-panel. Windows native tests exercise the shell icon lifecycle and native window
-callbacks. macOS smoke tests exercise AppKit creation, updates, menus and cleanup.
+panel. Windows native tests exercise native windows, icons and FFM callbacks.
+The shell lifecycle test first probes a stock Windows icon and skips only when
+the runner shell cannot accept it. The Windows ARM runner currently rejects even
+an independent C# P/Invoke stock-icon probe; its shell lifecycle remains unverified.
+macOS smoke tests exercise AppKit creation, updates, menu callbacks and cleanup.
 Visual appearance and physical mouse interaction still need desktop testing.
 
 GitHub Actions tests Linux, Windows and macOS on amd64 and aarch64. Only after
