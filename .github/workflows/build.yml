@@ -60,6 +60,54 @@ jobs:
           mvn -B verify
           java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
             -cp target/classes:target/test-classes io.github.red171.libtray.macos.MacSmoke
+      - name: Diagnose Windows shell failures
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ShellProbe {
+            [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+            public struct IconData {
+              public uint cbSize;
+              public IntPtr hWnd;
+              public uint uID, uFlags, uCallbackMessage;
+              public IntPtr hIcon;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=128)] public string szTip;
+              public uint dwState, dwStateMask;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=256)] public string szInfo;
+              public uint uVersion;
+              [MarshalAs(UnmanagedType.ByValTStr, SizeConst=64)] public string szInfoTitle;
+              public uint dwInfoFlags;
+              public Guid guidItem;
+              public IntPtr hBalloonIcon;
+            }
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)]
+            public static extern IntPtr CreateWindowExW(uint exStyle, string cls, string title, uint style,
+              int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)]
+            public static extern IntPtr LoadIconW(IntPtr instance, IntPtr name);
+            [DllImport("user32.dll")] public static extern bool DestroyWindow(IntPtr window);
+            [DllImport("shell32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+            public static extern bool Shell_NotifyIconW(uint message, ref IconData data);
+            public static void Run() {
+              var window = CreateWindowExW(0, "STATIC", "Shell probe", 0, 0, 0, 0, 0,
+                IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+              var data = new IconData {
+                cbSize = (uint) Marshal.SizeOf<IconData>(), hWnd = window, uID = 177,
+                uFlags = 0x87, uCallbackMessage = 0x401,
+                hIcon = LoadIconW(IntPtr.Zero, new IntPtr(32512)), szTip = "Shell probe",
+                szInfo = "", szInfoTitle = "", uVersion = 4
+              };
+              bool added = Shell_NotifyIconW(0, ref data);
+              Console.WriteLine($"P/Invoke control: size={data.cbSize}, window={window}, icon={data.hIcon}, added={added}, error={Marshal.GetLastWin32Error()}");
+              Shell_NotifyIconW(2, ref data);
+              DestroyWindow(window);
+            }
+          }
+          '@
+          [ShellProbe]::Run()
       - name: Test reports
         if: failure()
         uses: actions/upload-artifact@v7
