@@ -1,6 +1,6 @@
 # libtray-java
 
-Java 25 port of [red171/libtray](https://github.com/red171/libtray), originally
+Java 21 port of [Kitty-Hivens/libtray](https://github.com/Kitty-Hivens/libtray),
 written by Kitty-Hivens. Maven, Project Panama, no Kotlin and no SLF4J.
 No external Java runtime dependencies; Linux uses the OS's `libdbus-1`.
 
@@ -35,7 +35,7 @@ GitHub Packages repository:
     <dependency>
         <groupId>io.github.red171</groupId>
         <artifactId>libtray-java</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.2.0</version>
     </dependency>
 </dependencies>
 ```
@@ -58,8 +58,12 @@ Put credentials in `~/.m2/settings.xml`, not in the project:
 Use a GitHub personal access token (classic) with `read:packages`. For GitHub
 Actions consumers, a `GITHUB_TOKEN` with package read access can be used instead.
 
-Launch with `--enable-native-access=ALL-UNNAMED` when using the classpath.
+Launch on Java 21 with `--enable-preview --enable-native-access=ALL-UNNAMED`
+when using the classpath. The Foreign Function & Memory API is preview in Java 21;
+compile consumers with JDK 21 and `--enable-preview` as well. Preview classes are
+bound to Java 21 and cannot be loaded by Java 25.
 One JAR serves amd64 and aarch64; native system calls use the current JVM ABI.
+32-bit native backends are not verified by this build.
 
 ## Java API
 
@@ -123,7 +127,7 @@ replacing the installed application. Visual panel rendering remains untested.
 
 ## Build and tests
 
-Requires JDK 25 and Maven:
+Requires JDK 21 and Maven. Maven enables preview for compilation and tests:
 
 ```sh
 mvn verify
@@ -141,15 +145,17 @@ macOS smoke tests exercise AppKit creation, updates, menu callbacks and cleanup.
 Visual appearance and physical mouse interaction still need desktop testing.
 
 GitHub Actions tests Linux, Windows and macOS on amd64 and aarch64. Only after
-all jobs pass, pushes to main and manual main builds publish the Maven snapshot
+all jobs pass, pushes to main and manual main builds publish the Maven package
 to GitHub Packages. Pull requests never publish. No GitHub Release is created.
 
 Existing Core, Collector and JavaGUI are not switched over automatically.
 
 ## Provenance and changes
 
-Based on `red171/libtray`, branch `fix/flatpak-sni-bus-name`, commit
-`e83aa92ad73e822dbb5e423f92fe4c5503dff927`.
+Original source: [Kitty-Hivens/libtray](https://github.com/Kitty-Hivens/libtray).
+The Java port started from a modified snapshot of that project, branch
+`fix/flatpak-sni-bus-name`, commit `e83aa92ad73e822dbb5e423f92fe4c5503dff927`;
+that snapshot includes fork changes and is not an unmodified upstream revision.
 
 All Java source files are newly ported/modified counterparts, not unmodified
 upstream files. Changes: Kotlin rewritten as Java; package renamed to

@@ -103,7 +103,7 @@ final class ObjcBindings extends NativeLibrary {
     MemorySegment cls(String name) {
         return classes.computeIfAbsent(name, key -> {
             try (Arena temporary = Arena.ofConfined()) {
-                MemorySegment result = pointer("objc_getClass", temporary.allocateFrom(key));
+                MemorySegment result = pointer("objc_getClass", temporary.allocateUtf8String(key));
                 if (result.address() == 0) {
                     throw new IllegalStateException("Objective-C class missing: " + key);
                 }
@@ -115,20 +115,20 @@ final class ObjcBindings extends NativeLibrary {
     MemorySegment sel(String name) {
         return selectors.computeIfAbsent(name, key -> {
             try (Arena temporary = Arena.ofConfined()) {
-                return pointer("sel_registerName", temporary.allocateFrom(key));
+                return pointer("sel_registerName", temporary.allocateUtf8String(key));
             }
         });
     }
 
     MemorySegment text(String text) {
         try (Arena temporary = Arena.ofConfined()) {
-            return pointer("objc_msgSend_id_id", cls("NSString"), sel("stringWithUTF8String:"), temporary.allocateFrom(text));
+            return pointer("objc_msgSend_id_id", cls("NSString"), sel("stringWithUTF8String:"), temporary.allocateUtf8String(text));
         }
     }
 
     MemorySegment data(byte[] bytes) {
         try (Arena temporary = Arena.ofConfined()) {
-            MemorySegment buffer = temporary.allocateFrom(ValueLayout.JAVA_BYTE, bytes);
+            MemorySegment buffer = temporary.allocateArray(ValueLayout.JAVA_BYTE, bytes);
             return pointer("objc_msgSend_id_ptr_long", cls("NSData"), sel("dataWithBytes:length:"), buffer, (long) bytes.length);
         }
     }

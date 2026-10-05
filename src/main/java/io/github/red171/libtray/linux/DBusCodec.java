@@ -59,16 +59,16 @@ final class DBusCodec {
         if (type == 'a' || type == '(' || type == '{' || type == 'v') {
             MemorySegment child = arena.allocate(DBusBindings.ITER_LAYOUT);
             MemorySegment signature = switch (type) {
-                case 'a' -> arena.allocateFrom(value.signature().substring(1));
-                case 'v' -> arena.allocateFrom(((Value) value.value()).signature());
+                case 'a' -> arena.allocateUtf8String(value.signature().substring(1));
+                case 'v' -> arena.allocateUtf8String(((Value) value.value()).signature());
                 default -> MemorySegment.NULL;
             };
             int containerType = type == '(' ? 'r' : type == '{' ? 'e' : type;
             check(bindings.number("dbus_message_iter_open_container", parent, containerType, signature, child));
             if (value.value() instanceof byte[] bytes) {
                 if (bytes.length > 0) {
-                    MemorySegment buffer = arena.allocateFrom(ValueLayout.JAVA_BYTE, bytes);
-                    MemorySegment pointer = arena.allocateFrom(ValueLayout.ADDRESS, buffer);
+                    MemorySegment buffer = arena.allocateArray(ValueLayout.JAVA_BYTE, bytes);
+                    MemorySegment pointer = arena.allocate(ValueLayout.ADDRESS, buffer);
                     check(bindings.number("dbus_message_iter_append_fixed_array", child, (int) 'y', pointer, bytes.length));
                 }
             } else if (type == 'v') {
@@ -82,14 +82,14 @@ final class DBusCodec {
             return;
         }
         MemorySegment buffer = switch (type) {
-            case 's', 'o', 'g' -> arena.allocateFrom(ValueLayout.ADDRESS,
-                    arena.allocateFrom((String) value.value()));
-            case 'b' -> arena.allocateFrom(ValueLayout.JAVA_INT, (boolean) value.value() ? 1 : 0);
-            case 'i', 'u' -> arena.allocateFrom(ValueLayout.JAVA_INT, ((Number) value.value()).intValue());
-            case 'x', 't' -> arena.allocateFrom(ValueLayout.JAVA_LONG, ((Number) value.value()).longValue());
-            case 'n', 'q' -> arena.allocateFrom(ValueLayout.JAVA_SHORT, ((Number) value.value()).shortValue());
-            case 'y' -> arena.allocateFrom(ValueLayout.JAVA_BYTE, ((Number) value.value()).byteValue());
-            case 'd' -> arena.allocateFrom(ValueLayout.JAVA_DOUBLE, ((Number) value.value()).doubleValue());
+            case 's', 'o', 'g' -> arena.allocate(ValueLayout.ADDRESS,
+                    arena.allocateUtf8String((String) value.value()));
+            case 'b' -> arena.allocate(ValueLayout.JAVA_INT, (boolean) value.value() ? 1 : 0);
+            case 'i', 'u' -> arena.allocate(ValueLayout.JAVA_INT, ((Number) value.value()).intValue());
+            case 'x', 't' -> arena.allocate(ValueLayout.JAVA_LONG, ((Number) value.value()).longValue());
+            case 'n', 'q' -> arena.allocate(ValueLayout.JAVA_SHORT, ((Number) value.value()).shortValue());
+            case 'y' -> arena.allocate(ValueLayout.JAVA_BYTE, ((Number) value.value()).byteValue());
+            case 'd' -> arena.allocate(ValueLayout.JAVA_DOUBLE, ((Number) value.value()).doubleValue());
             default -> throw new IllegalArgumentException("Unsupported D-Bus signature: " + value.signature());
         };
         check(bindings.number("dbus_message_iter_append_basic", parent, type, buffer));

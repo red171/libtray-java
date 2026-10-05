@@ -78,7 +78,7 @@ public final class SniTray extends AbstractTray {
                     throw new IllegalStateException("No D-Bus session connection");
                 }
                 bindings.call("dbus_connection_set_exit_on_disconnect", connection, 0);
-                int result = bindings.number("dbus_bus_request_name", connection, arena.allocateFrom(busName),
+                int result = bindings.number("dbus_bus_request_name", connection, arena.allocateUtf8String(busName),
                         DBusBindings.NAME_FLAG_DO_NOT_QUEUE, error);
                 if (result != DBusBindings.REQUEST_NAME_REPLY_PRIMARY_OWNER) {
                     throw new IllegalStateException("D-Bus name unavailable: " + busName);
@@ -86,7 +86,7 @@ public final class SniTray extends AbstractTray {
                 for (String watcher : WATCHERS) {
                     String match = "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',"
                             + "member='NameOwnerChanged',arg0='" + watcher + "'";
-                    bindings.call("dbus_bus_add_match", connection, arena.allocateFrom(match), error);
+                    bindings.call("dbus_bus_add_match", connection, arena.allocateUtf8String(match), error);
                     if (bindings.number("dbus_error_is_set", error) != 0) {
                         throw new IllegalStateException("D-Bus watcher subscription failed");
                     }
@@ -473,17 +473,17 @@ public final class SniTray extends AbstractTray {
 
     private void register(String watcher) {
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment message = bindings.pointer("dbus_message_new_method_call", arena.allocateFrom(watcher),
-                    arena.allocateFrom("/StatusNotifierWatcher"), arena.allocateFrom("org.kde.StatusNotifierWatcher"),
-                    arena.allocateFrom("RegisterStatusNotifierItem"));
+            MemorySegment message = bindings.pointer("dbus_message_new_method_call", arena.allocateUtf8String(watcher),
+                    arena.allocateUtf8String("/StatusNotifierWatcher"), arena.allocateUtf8String("org.kde.StatusNotifierWatcher"),
+                    arena.allocateUtf8String("RegisterStatusNotifierItem"));
             sendMessage(message, List.of(text(busName)));
         }
     }
 
     private void signal(String path, String iface, String member, List<Value> values) {
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment message = bindings.pointer("dbus_message_new_signal", arena.allocateFrom(path),
-                    arena.allocateFrom(iface), arena.allocateFrom(member));
+            MemorySegment message = bindings.pointer("dbus_message_new_signal", arena.allocateUtf8String(path),
+                    arena.allocateUtf8String(iface), arena.allocateUtf8String(member));
             sendMessage(message, values);
         }
     }
@@ -500,7 +500,7 @@ public final class SniTray extends AbstractTray {
         }
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment message = bindings.pointer("dbus_message_new_error", request,
-                    arena.allocateFrom("org.freedesktop.DBus.Error." + name), arena.allocateFrom(detail));
+                    arena.allocateUtf8String("org.freedesktop.DBus.Error." + name), arena.allocateUtf8String(detail));
             sendMessage(message, List.of());
         }
     }

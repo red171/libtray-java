@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.red171</groupId>
     <artifactId>libtray-java</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0</version>
     <name>libtray-java</name>
     <description>Java port of libtray with no runtime dependencies.</description>
     <url>https://github.com/red171/libtray-java</url>
@@ -26,7 +26,8 @@
         </snapshotRepository>
     </distributionManagement>
     <properties>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.enablePreview>true</maven.compiler.enablePreview>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <libtray.nativeTests>false</libtray.nativeTests>
     </properties>
@@ -81,7 +82,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.4</version>
                 <configuration>
-                    <argLine>--enable-native-access=ALL-UNNAMED -Djava.awt.headless=true</argLine>
+                    <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -Djava.awt.headless=true</argLine>
                     <systemPropertyVariables>
                         <libtray.nativeTests>${libtray.nativeTests}</libtray.nativeTests>
                     </systemPropertyVariables>

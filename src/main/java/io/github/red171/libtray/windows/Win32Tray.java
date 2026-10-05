@@ -259,7 +259,7 @@ public final class Win32Tray extends AbstractTray {
 
     private MemorySegment createIcon(Pixels pixels) {
         try (Arena temporary = Arena.ofConfined()) {
-            MemorySegment color = temporary.allocateFrom(ValueLayout.JAVA_BYTE, pixels.bgra());
+            MemorySegment color = temporary.allocateArray(ValueLayout.JAVA_BYTE, pixels.bgra());
             MemorySegment mask = temporary.allocate(((pixels.width() + 31L) / 32) * 4 * pixels.height());
             return bindings.pointer("CreateIcon", instance, pixels.width(), pixels.height(), (byte) 1, (byte) 32, mask, color);
         }

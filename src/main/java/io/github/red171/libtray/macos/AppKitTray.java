@@ -356,7 +356,7 @@ public final class AppKitTray extends AbstractTray {
                 TRAMPOLINE = Linker.nativeLinker().upcallStub(dispatch,
                         FunctionDescriptor.ofVoid(ValueLayout.ADDRESS), BINDINGS.arena);
                 MemorySegment targetClass = BINDINGS.pointer("objc_allocateClassPair", BINDINGS.cls("NSObject"),
-                        BINDINGS.arena.allocateFrom("LibtrayJavaTarget_" + ProcessHandle.current().pid()), 0L);
+                        BINDINGS.arena.allocateUtf8String("LibtrayJavaTarget_" + ProcessHandle.current().pid()), 0L);
                 if (targetClass.address() == 0) {
                     throw new IllegalStateException("Cannot register Objective-C tray target");
                 }
@@ -368,7 +368,7 @@ public final class AppKitTray extends AbstractTray {
                     MemorySegment stub = Linker.nativeLinker().upcallStub(action, actionDescriptor, BINDINGS.arena);
                     String selector = name.equals("menuAction") ? "onMenuItem:" : "onTrayClick:";
                     boolean added = (boolean) BINDINGS.call("class_addMethod", targetClass, BINDINGS.sel(selector),
-                            stub, BINDINGS.arena.allocateFrom("v@:@"));
+                            stub, BINDINGS.arena.allocateUtf8String("v@:@"));
                     if (!added) {
                         throw new IllegalStateException("Cannot register Objective-C tray action");
                     }

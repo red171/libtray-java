@@ -46,7 +46,7 @@ public class NativeLibrary implements AutoCloseable {
     }
 
     public static String string(MemorySegment pointer) {
-        return pointer.address() == 0 ? "" : pointer.reinterpret(Long.MAX_VALUE).getString(0);
+        return pointer.address() == 0 ? "" : pointer.reinterpret(Long.MAX_VALUE).getUtf8String(0);
     }
 
     public static MemorySegment wideString(Arena arena, String text) {
