@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: zulu
-          java-version: '21'
+          java-version: '25'
           cache: maven
       - name: Install Linux test bus
         if: runner.os == 'Linux'
@@ -58,7 +58,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mvn -B verify
-          java -XstartOnFirstThread --enable-preview --enable-native-access=ALL-UNNAMED \
+          java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
             -cp target/classes:target/test-classes io.github.red171.libtray.macos.MacSmoke
       - name: Test reports
         if: failure()
@@ -81,7 +81,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: zulu
-          java-version: '21'
+          java-version: '25'
           cache: maven
           server-id: github
           server-username: GITHUB_ACTOR
@@ -93,7 +93,7 @@ jobs:
       - name: Verify published package from an empty Maven cache
         run: >-
           mvn -B dependency:get
-          -Dartifact=io.github.red171:libtray-java:0.2.0
+          -Dartifact=io.github.red171:libtray-java:0.1.0-SNAPSHOT
           -Dtransitive=false
           -DremoteRepositories=github::default::https://maven.pkg.github.com/red171/libtray-java
           -Dmaven.repo.local="${RUNNER_TEMP}/published-package-check"

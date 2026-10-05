@@ -34,7 +34,7 @@ final class TestBus implements AutoCloseable {
             MemorySegment error = arena.allocate(DBusBindings.ERROR_LAYOUT);
             bindings.call("dbus_error_init", error);
             try {
-                int result = bindings.number("dbus_bus_request_name", connection, arena.allocateUtf8String(name), 4, error);
+                int result = bindings.number("dbus_bus_request_name", connection, arena.allocateFrom(name), 4, error);
                 if (result != 1) {
                     throw new IllegalStateException("Cannot claim test bus name: " + name);
                 }
@@ -46,8 +46,8 @@ final class TestBus implements AutoCloseable {
 
     Response request(String destination, String path, String iface, String method, DBusCodec.Value... values) {
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment message = bindings.pointer("dbus_message_new_method_call", arena.allocateUtf8String(destination),
-                    arena.allocateUtf8String(path), arena.allocateUtf8String(iface), arena.allocateUtf8String(method));
+            MemorySegment message = bindings.pointer("dbus_message_new_method_call", arena.allocateFrom(destination),
+                    arena.allocateFrom(path), arena.allocateFrom(iface), arena.allocateFrom(method));
             MemorySegment error = arena.allocate(DBusBindings.ERROR_LAYOUT);
             bindings.call("dbus_error_init", error);
             try {
