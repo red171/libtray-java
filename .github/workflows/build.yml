@@ -66,6 +66,7 @@ jobs:
         with:
           name: test-reports-${{ matrix.runner }}
           path: target/surefire-reports
+          retention-days: 1
 
   publish:
     name: Publish Maven package
@@ -105,3 +106,4 @@ jobs:
           path: |
             target/*.jar
             pom.xml
+          retention-days: 1
