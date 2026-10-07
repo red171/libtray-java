@@ -60,18 +60,11 @@ jobs:
           mvn -B verify
           java -XstartOnFirstThread --enable-native-access=ALL-UNNAMED \
             -cp target/classes:target/test-classes io.github.red171.libtray.macos.MacSmoke
-      - name: Test reports
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-reports-${{ matrix.runner }}
-          path: target/surefire-reports
-          retention-days: 1
 
   publish:
     name: Publish Maven package
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -100,10 +93,3 @@ jobs:
           -Dmaven.repo.local="${RUNNER_TEMP}/published-package-check"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v7
-        with:
-          name: libtray-java
-          path: |
-            target/*.jar
-            pom.xml
-          retention-days: 1
