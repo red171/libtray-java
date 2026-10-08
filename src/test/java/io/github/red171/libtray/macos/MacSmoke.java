@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import javax.imageio.ImageIO;
 import java.lang.foreign.MemorySegment;
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class MacSmoke {
     public static void main(String[] args) throws Exception {
@@ -29,18 +29,18 @@ public final class MacSmoke {
                         || !tray.setMenu(null) || !tray.setMenu(menu)) {
                     throw new IllegalStateException("AppKit tray update failed");
                 }
-                var events = new ArrayList<TrayEvent>();
+                var events = new CopyOnWriteArrayList<TrayEvent>();
                 tray.onEvent(events::add);
                 var nativeTray = (AppKitTray) tray;
                 bindings.setObject(nativeTray.buttonHandle(), "performClick:", MemorySegment.NULL);
-                if (!events.contains(TrayEvent.Activated.INSTANCE)) {
+                if (!await(events, TrayEvent.Activated.INSTANCE)) {
                     throw new IllegalStateException("AppKit primary click callback failed");
                 }
                 MemorySegment selected = bindings.pointer("objc_msgSend_id_long", nativeTray.menuHandle(),
                         bindings.sel("itemAtIndex:"), 0L);
                 MemorySegment target = bindings.object(selected, "target");
                 bindings.setObject(target, "onMenuItem:", selected);
-                if (!events.contains(new TrayEvent.MenuItemSelected("show"))) {
+                if (!await(events, new TrayEvent.MenuItemSelected("show"))) {
                     throw new IllegalStateException("AppKit menu callback failed");
                 }
                 tray.close();
@@ -50,5 +50,14 @@ public final class MacSmoke {
             }
         }
         System.out.println("AppKit: create, updates, callbacks, menu, close and recreate passed");
+    }
+
+    /** Events arrive on the tray's event thread, so wait for them. */
+    private static boolean await(List<TrayEvent> events, TrayEvent expected) throws InterruptedException {
+        long deadline = System.nanoTime() + 5_000_000_000L;
+        while (!events.contains(expected) && System.nanoTime() < deadline) {
+            Thread.sleep(20);
+        }
+        return events.contains(expected);
     }
 }
