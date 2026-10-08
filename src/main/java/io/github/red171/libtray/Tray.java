@@ -1,8 +1,9 @@
 package io.github.red171.libtray;
 
-import java.util.function.Consumer;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 public interface Tray extends AutoCloseable {
     static Tray create(TrayBuilder builder) {
@@ -33,7 +34,20 @@ public interface Tray extends AutoCloseable {
 
     boolean setMenu(TrayMenu menu);
 
+    /**
+     * Registers a handler that runs on a thread owned by this tray, in firing
+     * order. A blocking handler delays later events of this tray only.
+     *
+     * @return a Runnable that unsubscribes the handler
+     */
     Runnable onEvent(Consumer<TrayEvent> handler);
+
+    /**
+     * Like {@link #onEvent(Consumer)}, but each event is submitted to
+     * {@code executor}, e.g. {@code SwingUtilities::invokeLater} or
+     * {@code Platform::runLater}.
+     */
+    Runnable onEvent(Executor executor, Consumer<TrayEvent> handler);
 
     @Override
     void close();

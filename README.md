@@ -25,9 +25,6 @@ GitHub Packages repository:
     <repository>
         <id>github-libtray-java</id>
         <url>https://maven.pkg.github.com/red171/libtray-java</url>
-        <snapshots>
-            <enabled>true</enabled>
-        </snapshots>
     </repository>
 </repositories>
 
@@ -35,7 +32,7 @@ GitHub Packages repository:
     <dependency>
         <groupId>io.github.red171</groupId>
         <artifactId>libtray-java</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>1.2.0</version>
     </dependency>
 </dependencies>
 ```
@@ -141,9 +138,26 @@ macOS smoke tests exercise AppKit creation, updates, menu callbacks and cleanup.
 Visual appearance and physical mouse interaction still need desktop testing.
 
 GitHub Actions tests Linux, Windows and macOS on amd64 and aarch64. Only after
-all jobs pass, pushes to main and manual main builds publish the Maven snapshot
-to GitHub Packages. Pull requests never publish. No GitHub Release is created.
+all jobs pass, pushing a `v*` tag publishes that release version to GitHub
+Packages. Branch pushes and pull requests never publish. No GitHub Release is created.
 
 Existing Core, Collector and JavaGUI are not switched over automatically.
+
+## Changes in 1.2.0
+
+- Events are delivered on one thread per tray, in firing order, instead of on the
+  backend thread (D-Bus I/O thread, Win32 message pump, Cocoa main thread). A
+  blocking handler can no longer stall replies to the tray host or `close()`.
+  Handlers that touch AppKit directly must register with an executor.
+- `Tray.onEvent(Executor, Consumer)` submits each event to an executor, e.g.
+  `SwingUtilities::invokeLater` or `Platform::runLater`. A class implementing
+  `Tray` itself must implement both `onEvent` overloads.
+- Linux: no `dbus_connection_flush` on the I/O thread, so `close()` always joins
+  even when the bus daemon stopped reading.
+- Windows: a right click opens the menu and fires `MenuRequested` once, not twice.
+- macOS: `close()` waits for the teardown on the Cocoa main queue, cancels an open
+  menu and defers the last releases until menu tracking has unwound.
+- Oversized icons are scaled by area averaging on the pixel array, without the AWT
+  Toolkit or Java2D.
 
 Apache License 2.0; see `LICENSE` and `NOTICE`, also included in the JAR.

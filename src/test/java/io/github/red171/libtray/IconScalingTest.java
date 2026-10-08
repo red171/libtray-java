@@ -65,4 +65,12 @@ class IconScalingTest {
         assertTrue(ImageIO.write(image, "PNG", output));
         return output.toByteArray();
     }
+
+    @Test
+    void areaAverageKeepsAlphaAndIgnoresTransparentColour() {
+        int[] source = {0xffff0000, 0x0000ff00, 0xffff0000, 0x00000000};
+        int[] scaled = IconScaling.areaAverage(source, 2, 2, 1, 1);
+        assertEquals(0x80ff0000, scaled[0]);
+        assertEquals(0, IconScaling.areaAverage(new int[4], 2, 2, 1, 1)[0]);
+    }
 }

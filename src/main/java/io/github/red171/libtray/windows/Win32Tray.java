@@ -305,8 +305,11 @@ public final class Win32Tray extends AbstractTray {
             case 0x0202, 0x0400, 0x0401 -> fire(TrayEvent.Activated.INSTANCE);
             case 0x0208 -> fire(TrayEvent.MiddleActivated.INSTANCE);
             case 0x0205, 0x007b -> {
-                fire(TrayEvent.MenuRequested.INSTANCE);
-                showMenu(word);
+                // A version 4 shell sends WM_RBUTTONUP and then WM_CONTEXTMENU for one click.
+                if (event == (version4 ? 0x007b : 0x0205)) {
+                    fire(TrayEvent.MenuRequested.INSTANCE);
+                    showMenu(word);
+                }
             }
             default -> {}
         }

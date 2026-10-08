@@ -3,13 +3,13 @@ package io.github.red171.libtray.internal;
 import io.github.red171.libtray.Tray;
 import io.github.red171.libtray.TrayEvent;
 import java.util.Objects;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 public abstract class AbstractTray implements Tray {
     protected final AtomicBoolean open = new AtomicBoolean(true);
-    private final CopyOnWriteArrayList<Consumer<TrayEvent>> handlers = new CopyOnWriteArrayList<>();
+    private final EventDispatcher dispatcher = new EventDispatcher("libtray-events");
 
     @Override
     public final boolean isOpen() {
@@ -18,31 +18,35 @@ public abstract class AbstractTray implements Tray {
 
     @Override
     public final Runnable onEvent(Consumer<TrayEvent> handler) {
+        return subscribe(null, handler);
+    }
+
+    @Override
+    public final Runnable onEvent(Executor executor, Consumer<TrayEvent> handler) {
+        Objects.requireNonNull(executor, "executor");
+        return subscribe(executor, handler);
+    }
+
+    private Runnable subscribe(Executor executor, Consumer<TrayEvent> handler) {
         Objects.requireNonNull(handler, "handler");
         if (!open.get()) {
             return () -> {};
         }
-        handlers.add(handler);
+        Runnable unsubscribe = dispatcher.subscribe(handler, executor);
         if (!open.get()) {
-            handlers.remove(handler);
+            unsubscribe.run();
         }
-        return () -> handlers.remove(handler);
+        return unsubscribe;
     }
 
     protected final void fire(TrayEvent event) {
-        if (!open.get()) {
-            return;
-        }
-        for (Consumer<TrayEvent> handler : handlers) {
-            try {
-                handler.accept(event);
-            } catch (RuntimeException failure) {
-                System.getLogger("libtray-java").log(System.Logger.Level.DEBUG, "Tray event handler failed", failure);
-            }
+        if (open.get()) {
+            dispatcher.fire(event);
         }
     }
 
+    /** Stops event delivery and drops queued events. */
     protected final void clearHandlers() {
-        handlers.clear();
+        dispatcher.close();
     }
 }

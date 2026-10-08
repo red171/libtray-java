@@ -514,7 +514,6 @@ public final class SniTray extends AbstractTray {
             if (bindings.number("dbus_connection_send", connection, message, MemorySegment.NULL) == 0) {
                 throw new IllegalStateException("D-Bus send failed");
             }
-            bindings.call("dbus_connection_flush", connection);
         } finally {
             bindings.call("dbus_message_unref", message);
         }

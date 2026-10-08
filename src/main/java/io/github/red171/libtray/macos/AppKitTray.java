@@ -21,9 +21,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class AppKitTray extends AbstractTray {
@@ -37,7 +39,10 @@ public final class AppKitTray extends AbstractTray {
     private final MemorySegment button;
     private final Integer maxIconSize;
     private final Set<Long> tags = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean tornDown = new AtomicBoolean();
     private MemorySegment nativeMenu = MemorySegment.NULL;
+    /** True while popUp() is inside menu tracking. Cocoa main thread only. */
+    private boolean menuOpen;
 
     private AppKitTray(ObjcBindings bindings, MemorySegment statusBar, MemorySegment statusItem,
                        MemorySegment button, TrayBuilder builder) {
@@ -153,9 +158,30 @@ public final class AppKitTray extends AbstractTray {
         BUTTONS.remove(button.address());
         if (bindings.isMainThread()) {
             bindings.pool(this::teardown);
-        } else {
-            enqueue(() -> bindings.pool(this::teardown));
+            return;
         }
+        // Run the teardown on the Cocoa main queue and wait, bounded, so the icon is gone
+        // when close() returns. It queues behind any update already running, so none of
+        // them can message a released status item. On timeout tear down on this thread
+        // instead; the tornDown guard keeps the queued copy from running a second time.
+        var done = new CountDownLatch(1);
+        try {
+            enqueue(() -> {
+                try {
+                    bindings.pool(this::teardown);
+                } finally {
+                    done.countDown();
+                }
+            });
+            if (done.await(2, TimeUnit.SECONDS)) {
+                return;
+            }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        } catch (RuntimeException failure) {
+            debug(failure);
+        }
+        bindings.pool(this::teardown);
     }
 
     private boolean update(Runnable action) {
@@ -261,6 +287,14 @@ public final class AppKitTray extends AbstractTray {
     }
 
     private void teardown() {
+        if (!tornDown.compareAndSet(false, true)) {
+            return;
+        }
+        // close() from inside the open menu's tracking loop: end the tracking first so
+        // AppKit is not left showing a menu of a removed item.
+        if (menuOpen && nativeMenu.address() != 0) {
+            bindings.call("objc_msgSend_void", nativeMenu, bindings.sel("cancelTracking"));
+        }
         BUTTONS.remove(button.address());
         tags.forEach(SELECTIONS::remove);
         tags.clear();
@@ -269,9 +303,35 @@ public final class AppKitTray extends AbstractTray {
             bindings.setObject(button, "setAction:", MemorySegment.NULL);
         }
         bindings.setObject(statusBar, "removeStatusItem:", statusItem);
+        // With the menu open, popUp() still holds its own references to the menu and the
+        // status item and releases them once tracking has unwound.
         bindings.release(nativeMenu);
         nativeMenu = MemorySegment.NULL;
         bindings.release(statusItem);
+    }
+
+    private void popUp() {
+        MemorySegment menu = nativeMenu;
+        // Extra references cover a setMenu or close() that releases ours while the menu
+        // is open. Their release is deferred to a later main-queue turn, after the
+        // event dispatch of the status bar window has unwound.
+        bindings.pointer("objc_retain", menu);
+        bindings.pointer("objc_retain", statusItem);
+        menuOpen = true;
+        try {
+            bindings.setObject(statusItem, "popUpStatusItemMenu:", menu);
+        } finally {
+            menuOpen = false;
+            Runnable releaseLater = () -> {
+                bindings.release(menu);
+                bindings.release(statusItem);
+            };
+            try {
+                enqueue(() -> bindings.pool(releaseLater));
+            } catch (RuntimeException failure) {
+                releaseLater.run();
+            }
+        }
     }
 
     private static long enqueue(Runnable task) {
@@ -324,7 +384,7 @@ public final class AppKitTray extends AbstractTray {
             if (type == 4) {
                 tray.fire(TrayEvent.MenuRequested.INSTANCE);
                 if (tray.open.get() && tray.nativeMenu.address() != 0) {
-                    bindings.setObject(tray.statusItem, "popUpStatusItemMenu:", tray.nativeMenu);
+                    tray.popUp();
                 }
             } else if (type == 26) {
                 tray.fire(TrayEvent.MiddleActivated.INSTANCE);

@@ -3,6 +3,7 @@ name: Build and publish
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -64,7 +65,7 @@ jobs:
   publish:
     name: Publish Maven package
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -87,7 +88,7 @@ jobs:
       - name: Verify published package from an empty Maven cache
         run: >-
           mvn -B dependency:get
-          -Dartifact=io.github.red171:libtray-java:0.1.0-SNAPSHOT
+          -Dartifact=io.github.red171:libtray-java:1.2.0
           -Dtransitive=false
           -DremoteRepositories=github::default::https://maven.pkg.github.com/red171/libtray-java
           -Dmaven.repo.local="${RUNNER_TEMP}/published-package-check"
