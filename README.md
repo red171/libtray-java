@@ -1,7 +1,7 @@
 # libtray-java
 
-Java 25 port of [red171/libtray](https://github.com/red171/libtray), originally
-written by Kitty-Hivens. Maven, Project Panama, no Kotlin and no SLF4J.
+Java 25 port of [libtray](https://github.com/Kitty-Hivens/libtray) by
+Kitty-Hivens. Maven, Project Panama, no Kotlin and no SLF4J.
 No external Java runtime dependencies; Linux uses the OS's `libdbus-1`.
 
 ## Platforms
@@ -145,21 +145,5 @@ all jobs pass, pushes to main and manual main builds publish the Maven snapshot
 to GitHub Packages. Pull requests never publish. No GitHub Release is created.
 
 Existing Core, Collector and JavaGUI are not switched over automatically.
-
-## Provenance and changes
-
-Based on `red171/libtray`, branch `fix/flatpak-sni-bus-name`, commit
-`e83aa92ad73e822dbb5e423f92fe4c5503dff927`.
-
-All Java source files are newly ported/modified counterparts, not unmodified
-upstream files. Changes: Kotlin rewritten as Java; package renamed to
-`io.github.red171.libtray`; Kotlin callbacks replaced by `Consumer`/`Runnable`;
-Maven replaces Gradle; SLF4J removed (diagnostics use JDK DEBUG logging).
-Configuration/menu collections and icon bytes are defensively copied.
-D-Bus iterator storage is aligned to 8 bytes. Linux outgoing calls and cleanup
-are owned by its I/O thread. Windows has a hidden top-level window for Explorer
-restart messages. macOS separates primary click actions from right-click menus
-and confines teardown to the Cocoa main queue. This is not binary-compatible
-with the original Kotlin artifact.
 
 Apache License 2.0; see `LICENSE` and `NOTICE`, also included in the JAR.
